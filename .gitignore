@@ -127,3 +127,16 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# AI Checkpoints and models
+*.pth
+
+# Archives, images, videos
+*.tar
+*.mp4
+*.gif
+*.png
+*.jpg
+*.jpeg
+
+
