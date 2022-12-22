@@ -10,7 +10,7 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 from scipy.spatial import ConvexHull
 import numpy as np
-import imageio
+import imageio.v2 as imageio
 from skimage.transform import resize
 from skimage import img_as_ubyte
 import torch

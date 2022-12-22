@@ -1,3 +1,3 @@
 # PhotoAI
 
-Project to explore statick image processing with different models and format output
+Project to explore static image processing with different models and format output
