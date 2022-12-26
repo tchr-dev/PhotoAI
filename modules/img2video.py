@@ -10,9 +10,10 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 from scipy.spatial import ConvexHull
 import numpy as np
-import imageio.v2 as imageio
-# from skimage.transform import resize
-# from skimage import img_as_ubyte
+import imageio.v2 as v2io
+import imageio.v3 as v3io
+from skimage.transform import resize
+from skimage import img_as_ubyte
 import torch
 from modules.inpainting_network import InpaintingNetwork
 from modules.keypoint_detector import KPDetector
@@ -47,10 +48,10 @@ def load_checkpoints(config_path, checkpoint_path, device):
                                               **config['model_params']['dense_motion_params'])
     avd_network = AVDNetwork(num_tps=config['model_params']['common_params']['num_tps'],
                              **config['model_params']['avd_network_params'])
-    kp_detector.to(device, dtype=torch.float32)
-    dense_motion_network.to(device, dtype=torch.float32)
-    inpainting.to(device, dtype=torch.float32)
-    avd_network.to(device, dtype=torch.float32)
+    kp_detector.to(device)
+    dense_motion_network.to(device)
+    inpainting.to(device)
+    avd_network.to(device)
        
     checkpoint = torch.load(checkpoint_path, map_location=device)
  
@@ -73,14 +74,14 @@ def make_animation(source_image, driving_video, inpainting_network, kp_detector,
     with torch.no_grad():
         predictions = []
         source = torch.tensor(source_image[np.newaxis].astype(np.float32)).permute(0, 3, 1, 2)
-        source = source.to(device, dtype=torch.float32)
-        driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(np.float32)).permute(0, 4, 1, 2, 3).to(device, dtype=torch.float32)
+        source = source.to(device)
+        driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(np.float32)).permute(0, 4, 1, 2, 3).to(device)
         kp_source = kp_detector(source)
         kp_driving_initial = kp_detector(driving[:, :, 0])
 
         for frame_idx in tqdm(range(driving.shape[2])):
             driving_frame = driving[:, :, frame_idx]
-            driving_frame = driving_frame.to(device, dtype=torch.float32)
+            driving_frame = driving_frame.to(device)
             kp_driving = kp_detector(driving_frame)
             if mode == 'standard':
                 kp_norm = kp_driving
@@ -125,3 +126,41 @@ def find_best_frame(source, driving, cpu):
         except:
             pass
     return frame_num
+
+def convert_image(source_image, driving_video, options):
+
+    # else:
+    #     device = torch.device('mps')
+    # Set the device      
+    # if torch.backends.mps.is_available():
+    #     device = torch.device("mps")
+    # else:
+    #     device = torch.device("cpu")
+    
+    device = torch.device("cpu")
+
+    source_image = resize(source_image, options.img_shape)[..., :3]
+    driving_video = v3io.imread(driving_video) # convert STR filepath to frame sequence
+    driving_video = [resize(frame, options.img_shape)[..., :3] for frame in driving_video]
+    reader = v2io.get_reader(options.driving_video)
+    fps = reader.get_meta_data()['fps']
+    reader.close()
+            
+    inpainting, kp_detector, dense_motion_network, avd_network = load_checkpoints(config_path = options.config, checkpoint_path = options.checkpoint, device = device)
+ 
+    if options.find_best_frame:
+        i = find_best_frame(source_image, driving_video, options.cpu)
+        print ("Best frame: " + str(i))
+        driving_forward = driving_video[i:]
+        driving_backward = driving_video[:(i+1)][::-1]
+        predictions_forward = make_animation(source_image, driving_forward, inpainting, kp_detector, dense_motion_network, avd_network, device = device, mode = options.mode)
+        predictions_backward = make_animation(source_image, driving_backward, inpainting, kp_detector, dense_motion_network, avd_network, device = device, mode = options.mode)
+        predictions = predictions_backward[::-1] + predictions_forward[1:]
+    else:
+        predictions = make_animation(source_image, driving_video, inpainting, kp_detector, dense_motion_network, avd_network, device = device, mode = options.mode)
+
+    v2io.mimsave(options.result_video, [img_as_ubyte(frame) for frame in predictions], fps=fps)
+
+    
+    
+    return source_image.shape, options.result_video

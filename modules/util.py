@@ -309,7 +309,7 @@ class AntiAliasInterpolation2d(nn.Module):
         kernel = 1
         meshgrids = torch.meshgrid(
             [
-                torch.arange(size, dtype=torch.float32)
+                torch.arange(size)
                 for size in kernel_size
                 ],
             indexing="ij"

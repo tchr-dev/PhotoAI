@@ -1,5 +1,5 @@
 import gradio as gr
-from modules.img2video import relative_kp, load_checkpoints, make_animation, find_best_frame
+from modules.img2video import convert_image
 from argparse import ArgumentParser
 import torch
 from skimage.transform import resize
@@ -41,47 +41,11 @@ def fn(source_image, driving_video):
     opt.mps = False
     
     # End Argument Setting
+    return convert_image(
+        source_image=source_image, 
+        driving_video=driving_video, 
+        options=opt)
 
-    # else:
-    #     device = torch.device('mps')
-    # Set the device      
-    # if torch.backends.mps.is_available():
-    #     device = torch.device("mps")
-    # else:
-    #     device = torch.device("cpu")
-    
-    device = torch.device("cpu")
-        
-    # Load Config
-
-    img = resize(source_image, opt.img_shape)[..., :3]
-    video = v3io.imread(driving_video)
-    video = [resize(frame, opt.img_shape)[..., :3] for frame in video]
-    reader = v2io.get_reader(opt.driving_video)
-    fps = reader.get_meta_data()['fps']
-    reader.close()
-
-
-            
-    inpainting, kp_detector, dense_motion_network, avd_network = load_checkpoints(config_path = opt.config, checkpoint_path = opt.checkpoint, device = device)
- 
-    # if opt.find_best_frame:
-    #     i = find_best_frame(source_image, driving_video, opt.cpu)
-    #     print ("Best frame: " + str(i))
-    #     driving_forward = driving_video[i:]
-    #     driving_backward = driving_video[:(i+1)][::-1]
-    #     predictions_forward = make_animation(source_image, driving_forward, inpainting, kp_detector, dense_motion_network, avd_network, device = device, mode = opt.mode)
-    #     predictions_backward = make_animation(source_image, driving_backward, inpainting, kp_detector, dense_motion_network, avd_network, device = device, mode = opt.mode)
-    #     predictions = predictions_backward[::-1] + predictions_forward[1:]
-    # else:
-    #     predictions = make_animation(source_image, driving_video, inpainting, kp_detector, dense_motion_network, avd_network, device = device, mode = opt.mode)
-    
-    predictions = make_animation(img, video, inpainting, kp_detector, dense_motion_network, avd_network, device = device, mode = opt.mode)
-    v2io.mimsave(opt.result_video, [img_as_ubyte(frame) for frame in predictions], fps=fps)
-    # End of Old code
-    
-    
-    return img.shape, opt.result_video
 
 application = gr.Interface(
     fn, 

@@ -14,7 +14,7 @@ class BGMotionPredictor(nn.Module):
         num_features = self.bg_encoder.fc.in_features
         self.bg_encoder.fc = nn.Linear(num_features, 6)
         self.bg_encoder.fc.weight.data.zero_()
-        self.bg_encoder.fc.bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0], dtype=torch.float))
+        self.bg_encoder.fc.bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0])
 
     def forward(self, source_image, driving_image):
         bs = source_image.shape[0]
