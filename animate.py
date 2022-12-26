@@ -47,10 +47,10 @@ def load_checkpoints(config_path, checkpoint_path, device):
                                               **config['model_params']['dense_motion_params'])
     avd_network = AVDNetwork(num_tps=config['model_params']['common_params']['num_tps'],
                              **config['model_params']['avd_network_params'])
-    kp_detector.to(device)
-    dense_motion_network.to(device)
-    inpainting.to(device)
-    avd_network.to(device)
+    kp_detector.to(device, dtype=torch.float32)
+    dense_motion_network.to(device, dtype=torch.float32)
+    inpainting.to(device, dtype=torch.float32)
+    avd_network.to(device, dtype=torch.float32)
        
     checkpoint = torch.load(checkpoint_path, map_location=device)
  
@@ -73,14 +73,14 @@ def make_animation(source_image, driving_video, inpainting_network, kp_detector,
     with torch.no_grad():
         predictions = []
         source = torch.tensor(source_image[np.newaxis].astype(np.float32)).permute(0, 3, 1, 2)
-        source = source.to(device)
-        driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(np.float32)).permute(0, 4, 1, 2, 3).to(device)
+        source = source.to(device, dtype=torch.float32)
+        driving = torch.tensor(np.array(driving_video)[np.newaxis].astype(np.float32)).permute(0, 4, 1, 2, 3).to(device, dtype=torch.float32)
         kp_source = kp_detector(source)
         kp_driving_initial = kp_detector(driving[:, :, 0])
 
         for frame_idx in tqdm(range(driving.shape[2])):
             driving_frame = driving[:, :, frame_idx]
-            driving_frame = driving_frame.to(device)
+            driving_frame = driving_frame.to(device, dtype=torch.float32)
             kp_driving = kp_detector(driving_frame)
             if mode == 'standard':
                 kp_norm = kp_driving
