@@ -163,4 +163,4 @@ def convert_image(source_image, driving_video, options):
 
     
     
-    return source_image.shape, options.result_video
+    return options.result_video
